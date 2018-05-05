@@ -1,0 +1,117 @@
+rm(list=ls())
+
+install.packages("ROCR")
+library(ROCR)
+library(caret)
+
+df  <- read.csv("C:/data_football/eng/premier_final_log.csv", row.names=NULL)
+df1  <- read.csv("C:/data_football/eng/E0.csv", row.names=NULL)
+df[2661:2767,c("WHH", "WHD", "WHA")] <- df1[1:107,c("B365H", "B365D", "B365A")] 
+
+sum(is.na(df))
+names(df)
+str(df)
+df$H2H_Diff <- df$H2H_Home_pts-df$H2H_Away_pts
+
+table(df$HM1)
+table(df$AM1)
+
+df$HM1 <- factor(ifelse(df$HM1 == "W", 1,0))
+df$AM1 <- factor(ifelse(df$AM1 == "W", 1,0))
+df$HM2 <- factor(ifelse(df$HM2 == "W", 1,0))
+df$AM2 <- factor(ifelse(df$AM2 == "W", 1,0))
+
+
+cols <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+          "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+          "ATLossStreak5", "HM1", "AM1", "HM2", "AM2")
+
+df[cols] <- lapply(df[cols], factor)
+
+#df$FTR <- factor(df$FTR, levels = c(0,1),
+#                 labels = c("Remis_lub_gosc", "Gospodarz"))
+table(df$FTR)
+round(prop.table(table(df$FTR)) * 100, digits = 1)
+
+cols1 <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+           "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+           "ATLossStreak5","HM1", "AM1",  "HM2", "AM2",
+           "WHH", "WHD", "WHA", "HTGD", "ATGD", "DiffFormPts", "DiffLP", "H2H_Diff")
+
+df <- df[180:nrow(df),cols1]
+
+
+sapply(df,function(x) sum(is.na(x)))
+
+
+
+
+#LABELS <- rep(rep(c("training", "validation"), c(3,2)), len=nrow(df))
+#observation.type <- factor((sample(LABELS, nrow(df))))
+#splitted.data.set <- split(df, observation.type)
+
+set.seed(1)
+smp_size <- floor(0.6 * nrow(df))
+train_ind <- sample(seq_len(nrow(df)), size = smp_size)
+
+train <- df[train_ind, ]
+test <- df[-train_ind, ]
+#train_labels <- df[train_ind, 1]
+#test_labels <- df[-train_ind, 1]
+
+
+
+
+predictions <- prediction.object <- roc <- model <- list()
+legend.label <- auc <- NULL
+NAMES <- c("pełny", "wybrane zmienne")
+model[[1]] <- glm(FTR~., family="binomial"(link="logit"), data= train)
+
+full <- glm(FTR~., family="binomial"(link="logit"), data= train)
+null <- glm(FTR~1, family="binomial"(link="logit"), data= train)
+
+step(null, scope=list(lower=null, upper=full), direction="forward")
+step(null, scope = list(upper=full), data=df, direction="both")
+
+model[[2]] <- glm(FTR~   WHA + WHH + HM1 + AM1 + HTLossStreak3 + AM2 + 
+                    H2H_Diff + DiffLP, family="binomial"(link="logit"), data= train)
+
+for (i in 1:length(model)) {
+  predictions[[i]] <- predict(model[[i]], new = test)
+  prediction.object[[i]] <- prediction(predictions[[i]],
+                                       test$FTR)
+  roc[[i]] <- performance(prediction.object[[i]], "tpr", "fpr")
+  auc[i] <- attr(performance(prediction.object[[i]], "auc"), "y.values")
+  legend.label[i] <- paste(NAMES[i], " (AUC=", format(auc[i], digits = 4), ")",
+                           sep = "")
+  plot(roc[[i]], add = (i != 1), lwd=2, lty = i, main="Krzywa ROC dla dwóch modeli regresji logistycznej", 
+       col=gray((i-1)/4), cex=.9)
+}
+
+legend("bottomright", legend.label, title="Modele", lty=1:length(model))
+summary(df)
+
+summary(model[[1]])
+summary(model[[2]])
+exp(coef(model[[1]]))
+exp(coef(model[[2]]))
+predict(model[[1]], newdata=test, type="response")
+install.packages("survey")
+library(survey)
+varImp(model[[1]])
+
+anova(model[[1]], test="Chisq")
+anova(model[[2]], test="Chisq")
+anova(model[[2]], model[[1]], test="Chisq")
+
+
+
+ctrl <- trainControl(method = "repeatedcv", number = 10, savePredictions = TRUE)
+
+mod_fit <- train(FTR ~ WHA + WHH + HM1 + AM1 + HTLossStreak3 + AM2 + 
+                   H2H_Diff + DiffLP, 
+                 data=train, method="glm", family="binomial",
+                 trControl = ctrl, tuneLength = 5)
+
+pred = predict(mod_fit, newdata=test)
+confusionMatrix(data=pred, test$FTR)
