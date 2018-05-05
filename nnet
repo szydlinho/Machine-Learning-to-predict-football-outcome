@@ -1,0 +1,159 @@
+
+rm(list=ls())
+#biblioteka do graficznych metod oceny jakosci modeli klasyfikacyjnych 
+library(nnet) #biblioteka do tworzenia sieci neuronowych
+library(pscl) #biblioteka do wyliczania wartosci pseduo-r2
+library(ROCR)
+install.packages("gamiss")
+library(gamiss)
+library(devtools)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+
+df  <- read.csv("C:/data_football/eng/premier_final_log.csv", row.names=NULL)
+df1  <- read.csv("C:/data_football/eng/E0.csv", row.names=NULL)
+df[2661:2767,c("WHH", "WHD", "WHA")] <- df1[1:107,c("B365H", "B365D", "B365A")] 
+
+
+df <- df[,-1]
+
+df$H2H_Diff <- df$H2H_Home_pts-df$H2H_Away_pts
+df$HM1 <- as.integer(ifelse(df$HM1 == "W", 1,0))
+df$AM1 <- as.integer(ifelse(df$AM1 == "W", 1,0))
+df$HM2 <- as.integer(ifelse(df$HM2 == "W", 1,0))
+df$AM2 <- as.integer(ifelse(df$AM2 == "W", 1,0))
+
+
+
+#cols <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+#          "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+#          "ATLossStreak5", "HM1", "AM1", "HM2", "AM2")
+#df[cols] <- lapply(df[cols], factor)
+str(df)
+table(df$HTWinStreak3)
+
+table(df$FTR)
+round(prop.table(table(df$FTR)) * 100, digits = 1)
+
+kolumny <- c('HTGD','ATGD','DiffPts','DiffFormPts','HTP','ATP')
+for (col in kolumny){
+  df[,col] <- df[,col] / df[,"MW"]
+}
+
+kolumny1 <- c("HTFormPts", "ATFormPts",  "WHH", "WHD", "WHA",
+              "H2H_Home_pts", "H2H_Away_pts", "DiffLP", "DiffPts", "DiffFormPts", "H2H_Diff",
+              'HTGD','ATGD','DiffPts','DiffFormPts','HTP','ATP', "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+              "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+              "ATLossStreak5","HM1", "AM1",  "HM2", "AM2")
+
+for (col in kolumny1){
+  df[,col] <- ((df[,col] - min(df[,col])) / (max(df[,col])- min(df[,col])))
+}
+
+cols1 <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+           "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+           "ATLossStreak5","HM1", "AM1",  "HM2", "AM2",
+           "WHH", "WHD", "WHA", "HTGD", "ATGD", "DiffFormPts", "DiffLP", "H2H_Diff")
+
+
+df <- df[180:nrow(df),cols1]
+sapply(df,function(x) sum(is.na(x)))
+tail(df)
+train.part <- valid.part <- 0.4
+random.numbers <- sample.int(nrow(df))
+quantiles <- quantile(random.numbers, prob = c(0, train.part, valid.part+train.part,1))
+split.labels <- cut(random.numbers, quantiles, include.lowest = T, 
+                    labels = c("train", "valid", "test"))
+data <- split(df, split.labels)
+
+#Sieci neuronowe
+
+NEURONS <- 5
+DECAY <- 2
+wts.parameter <-  2 * runif(NEURONS * ncol(df) + NEURONS + 1) - 1
+
+blad.trening <- numeric(20)
+blad.walidacyjny <- numeric(20)
+nett <- list()
+NEURONY <- seq(1:20)
+
+for (i in 1:length(NEURONY)) {
+  nett[[i]] <- nnet(FTR ~ ., data = data$train, size = i, 
+                  decay = DECAY, maxit = 10000,
+                  trace = FALSE)
+  predykcja <- predict(nett[[i]], newdata = data$train) 
+  blad.trening[i] <- mean((predykcja - data$train$FTR) ^ 2) #wyznaczamy blad na zbiorze trenujacym
+  predykcja1 <- predict(nett[[i]], newdata = data$valid)
+  blad.walidacyjny[i] <- mean((predykcja1 - data$valid$FTR) ^ 2) #i blad na zbiorze walidacyjnym
+}
+
+
+najlepsza.siec <- nett[[which.min(blad.walidacyjny)]]
+predykcja.test <- predict(najlepsza.siec, newdata = data$test)
+najmniejszy.blad.sieci <- mean((predykcja.test- data$test$Private) ^ 2)
+
+
+NEURONY <- seq(1,20)
+
+#oszacowanie liczby DECAY ktora minimalizuje model nett
+DECAYS <- seq(0, 1.5, length.out = 20)
+wts.patameter.najlepszy.neur <- 2 * runif(which.min(blad.walidacyjny) * ncol(df) + which.min(blad.walidacyjny) + 1) - 1
+neural.nets <- list()
+
+train.error <- numeric(20)
+valid.error <- numeric(20)
+
+for (d in 1:length(DECAYS)){
+  neural.nets[[d]] <- nnet(FTR ~ ., data = data$train, size = which.min(blad.walidacyjny), #trenujemy siec
+                           decay = DECAYS[d], maxit = 10000,
+                           trace = FALSE,Wts = wts.patameter.najlepszy.neur) 
+  prediction <- predict(neural.nets[[d]], newdata = data$train) 
+  train.error[d] <- mean((prediction - data$train$FTR) ^ 2) #wyznaczamy blad na zbiorze trenujacym
+  prediction <- predict(neural.nets[[d]], newdata = data$valid)
+  valid.error[d] <- mean((prediction - data$valid$FTR) ^ 2) #i blad na zbiorze walidacyjnym
+}
+
+
+best.neural.net <- neural.nets[[which.min(valid.error)]]
+test.prediction <- predict(best.neural.net, newdata = data$test)
+best.net.test.error <- mean((test.prediction - data$test$Private) ^ 2)
+
+
+
+plot(DECAYS, train.error, "l", ylim = range(c(0,0.8)),
+     lwd = 2, col = "red", xlab = "Parametr decay", ylab = "MSE")
+lines(DECAYS, valid.error, "l", col = "blue", lwd = 2)
+points(DECAYS[which.min(valid.error)], min(valid.error),
+       pch = 19, col = "blue", cex = 1.5)
+points(DECAYS[which.min(valid.error)], best.net.test.error,
+       pch = 19, col = "green", cex = 1.5)
+
+legend("top", lty = c(1, 1, NA, 2, 2, 2), lwd = c(2, 2, NA, 1, 1, 1),
+       col = c("red", "blue", "green"), pch = c(NA, NA, 19, NA, NA, NA),
+       y.intersp = 0.7, ncol = 2,
+       legend = c("Net train", "Net valid", "Net test"
+                 ))
+
+#generowanie optymalnej sieci neuronowej
+
+optymalna.siec <-  nnet(FTR ~ ., data = data$train, size = which.min(blad.walidacyjny), 
+                              decay = which.min(valid.error), maxit = 10000,
+                              trace = FALSE,Wts = wts.patameter.najlepszy.neur)
+plot.nnet(optymalna.siec,pos.col='darkgreen',neg.col='darkblue',alpha.val=0.3,rel.rsc=5,
+          circle.cex=3,cex=1
+          )
+
+predict.optymalna <- predict(optymalna.siec, newdata=data$valid)
+roc.siec.neuronowa <- performance(prediction(predict.optymalna, data$valid$FTR), "tpr", "rpp")
+auc.siec.neuronowa <- performance(prediction(predict.optymalna, data$valid$FTR), "auc")
+
+plot(roc.siec.neuronowa, main = paste("Krzywa ROC dla modelu optymalnej sieci neuronowej"), col="blue", lwd = 2,  xlim = c(0, 1))
+legend("right", lty = 1, lwd = 2, col = 1:4, y.intersp = .8,
+       legend = paste("AUC = ", round(auc.siec.neuronowa@y.values[[1]], digit = 5)), seg.len = 0.5, bty = "n")
+
+at("pole pod wykresem krzywej ROC dla modelu optymalnej sieci neuronowej na zbiorze walidacyjnym wynosi = ", auc.siec.neuronowa@y.values[[1]])
+
+
+#z  otrzymanych wynik?w wynika, ?e lepsz? moc predyckyjn? ma model logitowy 
+# w kt?rym zastosowane zosta?o kryterium BIC do wyoboru zmiennych w modelu
+# warto znaznaczy?, ?e oba modele przyjmuj? warto?? pola pod wykresem krzywej ROC , czyli AUC powy?ej 0.97
+#na zbiorze walidacyjnym co jest bardzo przyzwoitym wynikiem predykcyjnym.
