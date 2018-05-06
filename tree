@@ -1,0 +1,131 @@
+library(party)
+library(rpart)
+
+library(RColorBrewer)
+library(rattle)
+library(pROC)
+library(rpart.plot)
+df  <- read.csv("C:/data_football/eng/premier_final_log.csv", row.names=NULL)
+df1  <- read.csv("C:/data_football/eng/E0.csv", row.names=NULL)
+df[2661:2767,c("WHH", "WHD", "WHA")] <- df1[1:107,c("B365H", "B365D", "B365A")] 
+
+sum(is.na(df))
+names(df)
+str(df)
+df$H2H_Diff <- df$H2H_Home_pts-df$H2H_Away_pts
+df$HM1 <- factor(ifelse(df$HM1 == "W", 1,0))
+df$AM1 <- factor(ifelse(df$AM1 == "W", 1,0))
+df$HM2 <- factor(ifelse(df$HM2 == "W", 1,0))
+df$AM2 <- factor(ifelse(df$AM2 == "W", 1,0))
+
+cols <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+          "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+          "ATLossStreak5", "HM1", "AM1", "HM2", "AM2")
+df[cols] <- lapply(df[cols], factor)
+
+#df$FTR <- factor(df$FTR, levels = c(0,1),
+#                 labels = c("Remis_lub_gosc", "Gospodarz"))
+table(df$FTR)
+round(prop.table(table(df$FTR)) * 100, digits = 1)
+
+cols1 <- c("FTR", "HTWinStreak3", "HTWinStreak5", "HTLossStreak3", 
+           "HTLossStreak5", "ATWinStreak3", "ATWinStreak5", "ATLossStreak3", 
+           "ATLossStreak5","HM1", "AM1",  "HM2", "AM2",
+           "WHH", "WHD", "WHA", "HTGD", "ATGD", "DiffFormPts", "DiffLP", "H2H_Diff")
+
+
+df <- df[180:nrow(df),cols1]
+sapply(df,function(x) sum(is.na(x)))
+set.seed(1)
+TRAINING_SET_fraction <- 0.6
+
+smp_size <- floor(0.6 * nrow(df))
+training.set.index <- sample(seq_len(nrow(df)), size = smp_size)
+
+train <- df[training.set.index,]
+test <- df[-training.set.index,]
+
+
+c.tree <- ctree(FTR ~ ., data=train,
+                     controls = ctree_control(mincriterion = 0.95,
+                                              minsplit = 50))
+
+plot(c.tree, tnex=2, type="simple")
+
+devAskNewPage(ask=FALSE)
+
+rpart.model <-  rpart(FTR ~ . , train, cp=0.00001, minsplit=2)
+
+plotcp(rpart.model)
+
+minimum.error <-  which.min(rpart.model$cptable[,"xerror"])# w pracy wartosc = 3
+optimal.complexity <- rpart.model$cptable[minimum.error, "CP"] 
+points(minimum.error, rpart.model$cptable[minimum.error, "xerror"], pch=19)
+prunded.tree <- prune(rpart.model, cp=optimal.complexity)
+
+prp(prunded.tree)
+fancyRpartPlot(prunded.tree, cex=0.6, palettes=c("Greys", "Oranges"))
+
+
+
+#forest <- randomForest(FTR ~ . , data=train, ntree=300)
+#par(mfrow = c(3,1), mar= c(4, 4, 2, 1))
+
+#plot(forest, col="black")
+#varImpPlot(forest, bg=1)
+#plot(margin(forest, sort = TRUE), ylim = c(-1, 1), ylab = "margin")
+#abline(h = 0, lty = 2)
+
+confusion.matrix <- list()
+cat("Macierz trafnosci ctree")
+print(confusion.matrix[[1]] <- table(predict(c.tree, new = test),
+                                     test$FTR))
+
+cat("\nMacierz trafnosci rpart przycięty")
+print(confusion.matrix[[2]] <- table(predict(prunded.tree, type = "class",
+                                             newdata = test),
+                                     test$FTR))
+#cat("\nMacierz trafnosci las losowy")
+#print(confusion.matrix[[3]] <- table(predict(forest, newdata = test),
+#                                     test$FTR))
+cat("\nPorownanie dokladnodnosci modeli\n")
+CalculateAccuracy <- function(confusion.matrix) {
+  return(sum(diag(confusion.matrix)) / sum(confusion.matrix))
+}
+print(data.frame(model = c("Model 1", "Model 2"),
+                 dokladnosc = sapply(confusion.matrix, CalculateAccuracy)),
+      row.names = FALSE)
+
+credit_boost_pred10 <- predict(prunded.tree, test, type = "class")
+CrossTable(test$FTR, credit_boost_pred10,
+             prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+             dnn = c('RZECZYWISTE FTR', 'PRZEWIDYWANE FTR'))
+credit_boost_pred11 <- predict(c.tree, new = test)
+
+CrossTable(test$FTR, credit_boost_pred11,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('RZECZYWISTE FTR', 'PRZEWIDYWANE FTR'))
+
+
+pred <- prediction(predict(prunded.tree, type = "prob")[, 2], train$FTR)
+roc.rpart <- performance(pred, "tpr", "fpr")
+auc.rpart  <- attr(performance(pred, "auc"), "y.values")
+
+abline(0, 1, lty = 2)
+
+
+plot(roc.rpart, col="red", lwd=1, main="Model: Drzewo Decyzyjne")
+text(0.4, 0.4, sprintf("AUC = %0.4f", roc.drzewa$auc))
+predict.drzewa1 <- predict.drzewa
+
+
+
+predictions[[i]] <- predict(model[[i]], new = test)
+prediction.object[[i]] <- prediction(predictions[[i]],
+                                     test$FTR)
+roc[[i]] <- performance(prediction.object[[i]], "tpr", "fpr")
+auc[i] <- attr(performance(prediction.object[[i]], "auc"), "y.values")
+legend.label[i] <- paste(NAMES[i], " (AUC=", format(auc[i], digits = 4), ")",
+                         sep = "")
+plot(roc[[i]], add = (i != 1), lwd=2, lty = i, main="Krzywa ROC dla dwóch modeli regresji logistycznej", 
+     col=gray((i-1)/4), cex=.9)
