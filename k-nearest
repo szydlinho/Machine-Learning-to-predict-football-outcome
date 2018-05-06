@@ -1,0 +1,57 @@
+install.packages("class")
+library("class")
+library(caret)
+install.packages("gmodels")
+library("gmodels")
+df  <- read.csv("C:/data_football/eng/premier_final_log.csv", row.names=NULL)
+df1  <- read.csv("C:/data_football/eng/E0.csv", row.names=NULL)
+df[2661:2767,c("WHH", "WHD", "WHA")] <- df1[1:107,c("B365H", "B365D", "B365A")] 
+
+
+df <- df[,-1]
+
+str(df)
+table(df$HTWinStreak3)
+
+df$FTR <- factor(df$FTR, levels = c("0", "1"),
+                 labels = c("Remis_lub_gosc", "Gospodarz"))
+table(df$FTR)
+round(prop.table(table(df$FTR)) * 100, digits = 1)
+
+kolumny <- c('HTGD','ATGD','DiffPts','DiffFormPts','HTP','ATP')
+for (col in kolumny){
+  df[,col] <- df[,col] / df[,"MW"]
+}
+
+kolumny1 <- c("HTFormPts", "ATFormPts",  "WHH", "WHD", "WHA",
+              "H2H_Home_pts", "H2H_Away_pts", "DiffLP", "DiffPts", "DiffFormPts",
+              'HTGD','ATGD','DiffPts','DiffFormPts','HTP','ATP')
+
+for (col in kolumny1){
+  df[,col] <- ((df[,col] - min(df[,col])) / (max(df[,col])- min(df[,col])))
+}
+
+df <- df[,c("FTR",
+            "H2H_Home_pts", "H2H_Away_pts",
+            "WHH", "WHD", "WHA",
+            "HTGD" ,"ATGD" ,
+            "DiffPts","DiffFormPts", "DiffLP")]
+
+tail(df)
+names(df)
+tail(df)
+
+set.seed(123)
+train_ind <- sample(seq_len(nrow(df)), size = smp_size)
+
+train <- df[train_ind, -1]
+test <- df[-train_ind, -1]
+train_labels <- df[train_ind, 1]
+test_labels <- df[-train_ind, 1]
+
+test_pred <- knn(train = train, test = test,
+                 cl = train_labels, k=23)
+
+CrossTable(x = test_labels, y = test_pred,
+           prop.chisq=FALSE)
+
