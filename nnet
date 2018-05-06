@@ -6,8 +6,8 @@ library(pscl) #biblioteka do wyliczania wartosci pseduo-r2
 library(ROCR)
 install.packages("gamiss")
 library(gamiss)
-library(devtools)
-source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+#library(devtools)
+#source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
 
 df  <- read.csv("C:/data_football/eng/premier_final_log.csv", row.names=NULL)
 df1  <- read.csv("C:/data_football/eng/E0.csv", row.names=NULL)
@@ -119,19 +119,16 @@ best.net.test.error <- mean((test.prediction - data$test$Private) ^ 2)
 
 
 
-plot(DECAYS, train.error, "l", ylim = range(c(0,0.8)),
+plot(DECAYS, train.error, "l", ylim = range(c(0.1,0.4)),
      lwd = 2, col = "red", xlab = "Parametr decay", ylab = "MSE")
 lines(DECAYS, valid.error, "l", col = "blue", lwd = 2)
 points(DECAYS[which.min(valid.error)], min(valid.error),
        pch = 19, col = "blue", cex = 1.5)
-points(DECAYS[which.min(valid.error)], best.net.test.error,
-       pch = 19, col = "green", cex = 1.5)
 
-legend("top", lty = c(1, 1, NA, 2, 2, 2), lwd = c(2, 2, NA, 1, 1, 1),
-       col = c("red", "blue", "green"), pch = c(NA, NA, 19, NA, NA, NA),
+legend("top", lty = c(1, 1, NA), lwd = c(2, 2, NA),
+       col = c("red", "blue", "green"), pch = c(NA, NA, 19),
        y.intersp = 0.7, ncol = 2,
-       legend = c("Net train", "Net valid", "Net test"
-                 ))
+       legend = c("Net train", "Net valid", "Net test"))
 
 #generowanie optymalnej sieci neuronowej
 
@@ -139,8 +136,7 @@ optymalna.siec <-  nnet(FTR ~ ., data = data$train, size = which.min(blad.walida
                               decay = which.min(valid.error), maxit = 10000,
                               trace = FALSE,Wts = wts.patameter.najlepszy.neur)
 plot.nnet(optymalna.siec,pos.col='darkgreen',neg.col='darkblue',alpha.val=0.3,rel.rsc=5,
-          circle.cex=3,cex=1
-          )
+          circle.cex=3,cex=1)
 
 predict.optymalna <- predict(optymalna.siec, newdata=data$valid)
 roc.siec.neuronowa <- performance(prediction(predict.optymalna, data$valid$FTR), "tpr", "rpp")
@@ -150,8 +146,11 @@ plot(roc.siec.neuronowa, main = paste("Krzywa ROC dla modelu optymalnej sieci ne
 legend("right", lty = 1, lwd = 2, col = 1:4, y.intersp = .8,
        legend = paste("AUC = ", round(auc.siec.neuronowa@y.values[[1]], digit = 5)), seg.len = 0.5, bty = "n")
 
-at("pole pod wykresem krzywej ROC dla modelu optymalnej sieci neuronowej na zbiorze walidacyjnym wynosi = ", auc.siec.neuronowa@y.values[[1]])
+cat("pole pod wykresem krzywej ROC dla modelu optymalnej sieci neuronowej na zbiorze walidacyjnym wynosi = ", auc.siec.neuronowa@y.values[[1]])
 
+pred1 <- predict(optymalna.siec, newdata=data$test)
+prediction <- ifelse(pred1 > 0.5, 1, 0)
+confusionMatrix(data=prediction, data$test$FTR)
 
 #z  otrzymanych wynik?w wynika, ?e lepsz? moc predyckyjn? ma model logitowy 
 # w kt?rym zastosowane zosta?o kryterium BIC do wyoboru zmiennych w modelu
