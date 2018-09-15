@@ -1,0 +1,11 @@
+AM1,AM2,AM3,AM4,AM5,ATFormPts,ATFormPtsStr,ATGC,ATGD,ATGS,ATLossStreak3,ATLossStreak5,ATP,ATWinStreak3,ATWinStreak5,AwayTeam,AwayTeamLP,Date,DiffFormPts,DiffLP,DiffPts,FTAG,FTHG,FTR,H2H_Away,H2H_Away_pts,H2H_Home,H2H_Home_pts,HM1,HM2,HM3,HM4,HM5,HTFormPts,HTFormPtsStr,HTGC,HTGD,HTGS,HTLossStreak3,HTLossStreak5,HTP,HTWinStreak3,HTWinStreak5,HomeTeam,HomeTeamLP,MW,Sezon,WHA,WHD,WHH
+M,L,L,M,M,0,MLLMM,5.0,-4.0,1.0,0,0,0,0,0,Vallecano,16.0,2018-09-14,4,0.0,4,,,,ND,1,ND,1,L,D,W,M,M,4,LDWMM,11.0,-5.0,6.0,0,0,4,0,0,Huesca,16.0,4,19,3.1,3.5,2.2
+W,W,W,M,M,9,WWWMM,2.0,8.0,10.0,0,0,9,0,0,Real Madrid,3.0,2018-09-15,-5,13.0,-5,,,,ND,1,ND,1,M,D,W,M,M,4,MDWMM,3.0,1.0,4.0,0,0,4,0,0,Ath Bilbao,16.0,4,19,1.57,4.5,5.0
+W,L,L,M,M,3,WLLMM,5.0,-2.0,3.0,0,0,3,0,0,Eibar,9.0,2018-09-15,1,-7.0,1,,,,ND,1,ND,1,L,W,D,M,M,4,LWDMM,3.0,-1.0,2.0,0,0,4,0,0,Ath Madrid,2.0,4,19,9.0,4.5,1.36
+W,W,W,M,M,9,WWWMM,2.0,10.0,12.0,0,0,9,0,0,Barcelona,1.0,2018-09-15,-5,11.0,-5,,,,ND,1,ND,1,L,D,W,M,M,4,LDWMM,5.0,0.0,5.0,0,0,4,0,0,Sociedad,12.0,4,19,1.44,4.8,6.0
+W,D,L,M,M,4,WDLMM,3.0,-2.0,1.0,0,0,4,0,0,Betis,6.0,2018-09-15,-2,-2.0,-2,,,,ND,1,ND,1,D,L,D,M,M,2,DLDMM,5.0,-2.0,3.0,0,0,2,0,0,Valencia,4.0,4,19,4.4,3.75,1.75
+D,L,W,M,M,4,DLWMM,4.0,2.0,6.0,0,0,4,0,0,Levante,15.0,2018-09-16,0,-4.0,0,,,,ND,1,ND,1,L,W,D,M,M,4,LWDMM,3.0,1.0,4.0,0,0,4,0,0,Espanol,11.0,4,19,4.5,3.75,1.75
+L,D,L,M,M,1,LDLMM,3.0,-2.0,1.0,0,0,1,0,0,Villarreal,5.0,2018-09-16,0,12.0,0,,,,ND,1,ND,1,L,D,L,M,M,1,LDLMM,8.0,-4.0,4.0,0,0,1,0,0,Leganes,17.0,4,19,2.5,3.2,2.9
+D,W,L,M,M,4,DWLMM,2.0,0.0,2.0,0,0,4,0,0,Getafe,8.0,2018-09-16,0,-1.0,0,,,,ND,1,ND,1,L,D,W,M,M,4,LDWMM,2.0,2.0,4.0,0,0,4,0,0,Sevilla,7.0,4,19,5.8,3.9,1.57
+W,D,L,M,M,4,WDLMM,4.0,-2.0,2.0,0,0,4,0,0,Alaves,14.0,2018-09-16,-2,2.0,-2,,,,ND,1,ND,1,D,L,D,M,M,2,DLDMM,1.0,-1.0,0.0,0,0,2,0,0,Valladolid,16.0,4,19,3.6,2.9,2.25
+W,W,D,M,M,7,WWDMM,2.0,3.0,5.0,0,0,7,0,0,Celta,13.0,2018-09-17,-3,-3.0,-3,,,,ND,1,ND,1,W,L,D,M,M,4,WLDMM,4.0,-2.0,2.0,0,0,4,0,0,Girona,10.0,4,19,2.88,3.4,2.38
